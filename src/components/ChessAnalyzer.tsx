@@ -32,6 +32,7 @@ const ChessAnalyzer = () => {
           description: "You can now analyze the game moves",
         });
       } catch (error) {
+        console.error('Error loading PGN:', error);
         toast({
           title: "Error loading PGN",
           description: "Please check if the file contains valid PGN notation",
@@ -43,28 +44,31 @@ const ChessAnalyzer = () => {
   }, [toast]);
 
   const goToMove = useCallback((index: number) => {
-    const newGame = new Chess();
-    newGame.loadPgn(pgn);
-    const history = newGame.history();
-    
-    for (let i = 0; i <= index; i++) {
-      if (i < history.length) {
-        newGame.move(history[i]);
+    try {
+      const newGame = new Chess();
+      if (index >= 0 && index < moves.length) {
+        // Apply moves up to the target index
+        for (let i = 0; i <= index; i++) {
+          newGame.move(moves[i]);
+        }
       }
+      setGame(newGame);
+      setCurrentMoveIndex(index);
+    } catch (error) {
+      console.error('Error navigating to move:', error);
+      toast({
+        title: "Error navigating moves",
+        description: "An error occurred while trying to navigate through the moves",
+        variant: "destructive",
+      });
     }
-    
-    setGame(newGame);
-    setCurrentMoveIndex(index);
-  }, [pgn]);
+  }, [moves, toast]);
 
   const analyzeMoveQuality = useCallback((move: string, index: number) => {
-    // This is a simplified analysis. In a real application, you would use a chess engine
-    // like Stockfish to analyze positions and determine move quality
     const moveNumber = Math.floor(index / 2) + 1;
     const isWhiteMove = index % 2 === 0;
     const moveNotation = `${moveNumber}${isWhiteMove ? '.' : '...'} ${move}`;
     
-    // Simulated analysis (in a real app, this would come from an engine)
     const randomQuality = Math.random();
     let quality = '';
     let className = '';
