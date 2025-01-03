@@ -1,53 +1,19 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Chess } from 'chess.js';
 import { Chessboard } from 'react-chessboard';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { ArrowLeftIcon, ArrowRightIcon } from 'lucide-react';
 import { useToast } from './ui/use-toast';
-
-interface MoveEvaluation {
-  move: string;
-  quality: string;
-  className: string;
-  score?: number;
-}
+import { evaluateMove, MoveEvaluation } from '../utils/moveAnalysis';
+import MoveList from './MoveList';
 
 const ChessAnalyzer = () => {
   const [game, setGame] = useState(new Chess());
   const [currentMoveIndex, setCurrentMoveIndex] = useState(0);
   const [moves, setMoves] = useState<string[]>([]);
-  const [pgn, setPgn] = useState('');
   const [moveEvaluations, setMoveEvaluations] = useState<MoveEvaluation[]>([]);
   const { toast } = useToast();
-
-  const evaluateMove = (move: string, index: number): MoveEvaluation => {
-    // Using a seeded random number based on the move and index for consistency
-    const hash = move.split('').reduce((acc, char) => acc + char.charCodeAt(0), index);
-    const randomQuality = (hash % 100) / 100;
-    
-    let quality = '';
-    let className = '';
-    
-    if (randomQuality > 0.9) {
-      quality = '!! (Brilliant)';
-      className = 'text-green-600 font-bold';
-    } else if (randomQuality > 0.7) {
-      quality = '! (Good move)';
-      className = 'text-green-500';
-    } else if (randomQuality > 0.4) {
-      quality = '⟳ (Normal)';
-      className = 'text-gray-500';
-    } else if (randomQuality > 0.2) {
-      quality = '? (Inaccuracy)';
-      className = 'text-yellow-500';
-    } else {
-      quality = '?? (Blunder)';
-      className = 'text-red-500';
-    }
-
-    return { move, quality, className };
-  };
 
   const handlePgnUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -60,8 +26,6 @@ const ChessAnalyzer = () => {
         const newGame = new Chess();
         newGame.loadPgn(pgnContent);
         const moveHistory = newGame.history();
-        
-        // Evaluate all moves at once when loading PGN
         const evaluations = moveHistory.map((move, index) => evaluateMove(move, index));
         
         setPgn(pgnContent);
@@ -86,26 +50,38 @@ const ChessAnalyzer = () => {
     reader.readAsText(file);
   }, [toast]);
 
+  const getCustomArrows = () => {
+    if (currentMoveIndex < 0 || currentMoveIndex >= moveEvaluations.length) return [];
+    
+    const evaluation = moveEvaluations[currentMoveIndex];
+    if (!evaluation?.suggestedMove) return [];
+
+    return [[
+      evaluation.suggestedMove.from,
+      evaluation.suggestedMove.to,
+      'rgb(0, 255, 0)'
+    ]];
+  };
+
   const getSquareStyles = useCallback(() => {
     if (currentMoveIndex < 0 || currentMoveIndex >= moveEvaluations.length) return {};
 
     const evaluation = moveEvaluations[currentMoveIndex];
     const move = moves[currentMoveIndex];
     
-    // Get the target square of the current move
     const targetSquare = move.replace(/[+#]?[!?]*$/, '').slice(-2).toLowerCase();
     
     let backgroundColor;
     if (evaluation.quality.includes('Brilliant')) {
-      backgroundColor = 'rgba(34, 197, 94, 0.5)';  // green
+      backgroundColor = 'rgba(34, 197, 94, 0.5)';
     } else if (evaluation.quality.includes('Good')) {
-      backgroundColor = 'rgba(34, 197, 94, 0.3)';  // light green
+      backgroundColor = 'rgba(34, 197, 94, 0.3)';
     } else if (evaluation.quality.includes('Normal')) {
-      backgroundColor = 'rgba(156, 163, 175, 0.3)';  // gray
+      backgroundColor = 'rgba(156, 163, 175, 0.3)';
     } else if (evaluation.quality.includes('Inaccuracy')) {
-      backgroundColor = 'rgba(234, 179, 8, 0.3)';  // yellow
+      backgroundColor = 'rgba(234, 179, 8, 0.3)';
     } else {
-      backgroundColor = 'rgba(239, 68, 68, 0.3)';  // red
+      backgroundColor = 'rgba(239, 68, 68, 0.3)';
     }
 
     return {
@@ -117,7 +93,6 @@ const ChessAnalyzer = () => {
     try {
       const newGame = new Chess();
       if (index >= 0 && index < moves.length) {
-        // Apply moves up to the target index
         for (let i = 0; i <= index; i++) {
           newGame.move(moves[i]);
         }
@@ -134,24 +109,6 @@ const ChessAnalyzer = () => {
     }
   }, [moves, toast]);
 
-  const analyzeMoveQuality = useCallback((move: string, index: number) => {
-    const moveNumber = Math.floor(index / 2) + 1;
-    const isWhiteMove = index % 2 === 0;
-    const moveNotation = `${moveNumber}${isWhiteMove ? '.' : '...'} ${move}`;
-    
-    const evaluation = moveEvaluations[index] || evaluateMove(move, index);
-    
-    return (
-      <div 
-        key={index} 
-        className={`cursor-pointer p-2 hover:bg-gray-100 ${currentMoveIndex === index ? 'bg-gray-200' : ''} ${evaluation.className}`}
-        onClick={() => goToMove(index)}
-      >
-        {moveNotation} {evaluation.quality}
-      </div>
-    );
-  }, [currentMoveIndex, goToMove, moveEvaluations]);
-
   return (
     <div className="container mx-auto p-4">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -161,6 +118,7 @@ const ChessAnalyzer = () => {
               position={game.fen()} 
               boardWidth={600}
               customSquareStyles={getSquareStyles()}
+              customArrows={getCustomArrows()}
             />
           </div>
           <div className="flex justify-center gap-4 mt-4">
@@ -192,9 +150,12 @@ const ChessAnalyzer = () => {
           </div>
           <div>
             <h2 className="text-xl font-bold mb-2">Move List</h2>
-            <div className="max-h-[400px] overflow-y-auto border rounded-md">
-              {moves.map((move, index) => analyzeMoveQuality(move, index))}
-            </div>
+            <MoveList
+              moves={moves}
+              moveEvaluations={moveEvaluations}
+              currentMoveIndex={currentMoveIndex}
+              onMoveClick={goToMove}
+            />
           </div>
         </div>
       </div>
