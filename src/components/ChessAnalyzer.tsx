@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Chess } from 'chess.js';
 import { Chessboard } from 'react-chessboard';
 import { Button } from './ui/button';
@@ -6,12 +6,48 @@ import { Input } from './ui/input';
 import { ArrowLeftIcon, ArrowRightIcon } from 'lucide-react';
 import { useToast } from './ui/use-toast';
 
+interface MoveEvaluation {
+  move: string;
+  quality: string;
+  className: string;
+  score?: number;
+}
+
 const ChessAnalyzer = () => {
   const [game, setGame] = useState(new Chess());
   const [currentMoveIndex, setCurrentMoveIndex] = useState(0);
   const [moves, setMoves] = useState<string[]>([]);
   const [pgn, setPgn] = useState('');
+  const [moveEvaluations, setMoveEvaluations] = useState<MoveEvaluation[]>([]);
   const { toast } = useToast();
+
+  const evaluateMove = (move: string, index: number): MoveEvaluation => {
+    // Using a seeded random number based on the move and index for consistency
+    const hash = move.split('').reduce((acc, char) => acc + char.charCodeAt(0), index);
+    const randomQuality = (hash % 100) / 100;
+    
+    let quality = '';
+    let className = '';
+    
+    if (randomQuality > 0.9) {
+      quality = '!! (Brilliant)';
+      className = 'text-green-600 font-bold';
+    } else if (randomQuality > 0.7) {
+      quality = '! (Good move)';
+      className = 'text-green-500';
+    } else if (randomQuality > 0.4) {
+      quality = '⟳ (Normal)';
+      className = 'text-gray-500';
+    } else if (randomQuality > 0.2) {
+      quality = '? (Inaccuracy)';
+      className = 'text-yellow-500';
+    } else {
+      quality = '?? (Blunder)';
+      className = 'text-red-500';
+    }
+
+    return { move, quality, className };
+  };
 
   const handlePgnUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -23,10 +59,17 @@ const ChessAnalyzer = () => {
         const pgnContent = e.target?.result as string;
         const newGame = new Chess();
         newGame.loadPgn(pgnContent);
+        const moveHistory = newGame.history();
+        
+        // Evaluate all moves at once when loading PGN
+        const evaluations = moveHistory.map((move, index) => evaluateMove(move, index));
+        
         setPgn(pgnContent);
-        setGame(newGame);
-        setMoves(newGame.history());
+        setGame(new Chess());
+        setMoves(moveHistory);
+        setMoveEvaluations(evaluations);
         setCurrentMoveIndex(0);
+        
         toast({
           title: "PGN loaded successfully",
           description: "You can now analyze the game moves",
@@ -42,6 +85,33 @@ const ChessAnalyzer = () => {
     };
     reader.readAsText(file);
   }, [toast]);
+
+  const getSquareStyles = useCallback(() => {
+    if (currentMoveIndex < 0 || currentMoveIndex >= moveEvaluations.length) return {};
+
+    const evaluation = moveEvaluations[currentMoveIndex];
+    const move = moves[currentMoveIndex];
+    
+    // Get the target square of the current move
+    const targetSquare = move.replace(/[+#]?[!?]*$/, '').slice(-2).toLowerCase();
+    
+    let backgroundColor;
+    if (evaluation.quality.includes('Brilliant')) {
+      backgroundColor = 'rgba(34, 197, 94, 0.5)';  // green
+    } else if (evaluation.quality.includes('Good')) {
+      backgroundColor = 'rgba(34, 197, 94, 0.3)';  // light green
+    } else if (evaluation.quality.includes('Normal')) {
+      backgroundColor = 'rgba(156, 163, 175, 0.3)';  // gray
+    } else if (evaluation.quality.includes('Inaccuracy')) {
+      backgroundColor = 'rgba(234, 179, 8, 0.3)';  // yellow
+    } else {
+      backgroundColor = 'rgba(239, 68, 68, 0.3)';  // red
+    }
+
+    return {
+      [targetSquare]: { backgroundColor }
+    };
+  }, [currentMoveIndex, moveEvaluations, moves]);
 
   const goToMove = useCallback((index: number) => {
     try {
@@ -69,37 +139,18 @@ const ChessAnalyzer = () => {
     const isWhiteMove = index % 2 === 0;
     const moveNotation = `${moveNumber}${isWhiteMove ? '.' : '...'} ${move}`;
     
-    const randomQuality = Math.random();
-    let quality = '';
-    let className = '';
+    const evaluation = moveEvaluations[index] || evaluateMove(move, index);
     
-    if (randomQuality > 0.9) {
-      quality = '!! (Brilliant)';
-      className = 'text-green-600 font-bold';
-    } else if (randomQuality > 0.7) {
-      quality = '! (Good move)';
-      className = 'text-green-500';
-    } else if (randomQuality > 0.4) {
-      quality = '⟳ (Normal)';
-      className = 'text-gray-500';
-    } else if (randomQuality > 0.2) {
-      quality = '? (Inaccuracy)';
-      className = 'text-yellow-500';
-    } else {
-      quality = '?? (Blunder)';
-      className = 'text-red-500';
-    }
-
     return (
       <div 
         key={index} 
-        className={`cursor-pointer p-2 hover:bg-gray-100 ${currentMoveIndex === index ? 'bg-gray-200' : ''} ${className}`}
+        className={`cursor-pointer p-2 hover:bg-gray-100 ${currentMoveIndex === index ? 'bg-gray-200' : ''} ${evaluation.className}`}
         onClick={() => goToMove(index)}
       >
-        {moveNotation} {quality}
+        {moveNotation} {evaluation.quality}
       </div>
     );
-  }, [currentMoveIndex, goToMove]);
+  }, [currentMoveIndex, goToMove, moveEvaluations]);
 
   return (
     <div className="container mx-auto p-4">
@@ -109,6 +160,7 @@ const ChessAnalyzer = () => {
             <Chessboard 
               position={game.fen()} 
               boardWidth={600}
+              customSquareStyles={getSquareStyles()}
             />
           </div>
           <div className="flex justify-center gap-4 mt-4">
