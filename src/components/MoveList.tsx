@@ -21,20 +21,36 @@ const MoveList: React.FC<MoveListProps> = ({
     const evaluation = moveEvaluations[index];
     
     return (
-      <div 
-        key={index} 
-        className={`cursor-pointer p-2 hover:bg-gray-100 ${
-          currentMoveIndex === index ? 'bg-gray-200' : ''
-        } ${evaluation?.className || ''}`}
-        onClick={() => onMoveClick(index)}
-      >
-        {moveNotation} {evaluation?.quality || ''}
+      <div key={index} className="space-y-2">
+        <div 
+          className={`cursor-pointer p-2 hover:bg-gray-100 ${
+            currentMoveIndex === index ? 'bg-gray-200' : ''
+          } ${evaluation?.className || ''}`}
+          onClick={() => onMoveClick(index)}
+        >
+          {moveNotation} {evaluation?.quality || ''}
+        </div>
+        {evaluation?.alternateLines && evaluation.alternateLines.length > 0 && (
+          <div className="ml-4 text-sm space-y-1">
+            {evaluation.alternateLines.map((line, lineIndex) => (
+              <div 
+                key={lineIndex}
+                className="text-gray-600 hover:text-gray-900"
+              >
+                Alternative {lineIndex + 1} (eval: {line.evaluation.toFixed(2)}):
+                <div className="ml-2 font-mono">
+                  {line.moves.join(' ')}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     );
   };
 
   return (
-    <div className="max-h-[400px] overflow-y-auto border rounded-md">
+    <div className="max-h-[400px] overflow-y-auto border rounded-md p-2 space-y-2">
       {moves.map((move, index) => analyzeMoveQuality(move, index))}
     </div>
   );
