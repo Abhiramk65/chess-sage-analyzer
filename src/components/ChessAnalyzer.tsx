@@ -56,11 +56,11 @@ const ChessAnalyzer = () => {
     const evaluation = moveEvaluations[currentMoveIndex];
     if (!evaluation?.suggestedMove) return [];
 
-    return [{
-      from: evaluation.suggestedMove.from,
-      to: evaluation.suggestedMove.to,
-      color: 'rgb(0, 255, 0)'
-    }];
+    return [[
+      evaluation.suggestedMove.from,
+      evaluation.suggestedMove.to,
+      'rgb(0, 255, 0)'
+    ]];
   };
 
   const getSquareStyles = useCallback(() => {
