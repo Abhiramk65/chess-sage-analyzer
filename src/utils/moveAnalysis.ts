@@ -1,12 +1,12 @@
-import { Chess } from 'chess.js';
+import { Square } from 'react-chessboard/dist/chessboard/types';
 
 export interface MoveEvaluation {
   move: string;
   quality: string;
   className: string;
   suggestedMove?: {
-    from: string;
-    to: string;
+    from: Square;
+    to: Square;
   };
 }
 
@@ -48,8 +48,8 @@ export const evaluateMove = (move: string, index: number): MoveEvaluation => {
     quality,
     className,
     suggestedMove: {
-      from: `${fromFile}${fromRank}`,
-      to: `${toFile}${toRank}`,
+      from: `${fromFile}${fromRank}` as Square,
+      to: `${toFile}${toRank}` as Square,
     }
   };
 };

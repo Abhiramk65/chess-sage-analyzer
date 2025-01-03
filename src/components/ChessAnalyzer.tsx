@@ -7,7 +7,7 @@ import { ArrowLeftIcon, ArrowRightIcon } from 'lucide-react';
 import { useToast } from './ui/use-toast';
 import { evaluateMove, MoveEvaluation } from '../utils/moveAnalysis';
 import MoveList from './MoveList';
-import { Arrow } from 'react-chessboard/dist/chessboard/types';
+import { Arrow, Square } from 'react-chessboard/dist/chessboard/types';
 
 const ChessAnalyzer = () => {
   const [game, setGame] = useState(new Chess());
