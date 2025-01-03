@@ -8,6 +8,13 @@ import { useToast } from './ui/use-toast';
 import { evaluateMove, MoveEvaluation } from '../utils/moveAnalysis';
 import MoveList from './MoveList';
 
+// Define the Arrow type to match react-chessboard's requirements
+type Arrow = {
+  from: string;
+  to: string;
+  color: string;
+};
+
 const ChessAnalyzer = () => {
   const [game, setGame] = useState(new Chess());
   const [currentMoveIndex, setCurrentMoveIndex] = useState(0);
@@ -49,7 +56,7 @@ const ChessAnalyzer = () => {
     reader.readAsText(file);
   }, [toast]);
 
-  const getCustomArrows = () => {
+  const getCustomArrows = (): Arrow[] => {
     if (currentMoveIndex < 0 || currentMoveIndex >= moveEvaluations.length) return [];
     
     const evaluation = moveEvaluations[currentMoveIndex];
