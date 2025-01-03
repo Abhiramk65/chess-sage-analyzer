@@ -28,7 +28,6 @@ const ChessAnalyzer = () => {
         const moveHistory = newGame.history();
         const evaluations = moveHistory.map((move, index) => evaluateMove(move, index));
         
-        setPgn(pgnContent);
         setGame(new Chess());
         setMoves(moveHistory);
         setMoveEvaluations(evaluations);
@@ -56,11 +55,11 @@ const ChessAnalyzer = () => {
     const evaluation = moveEvaluations[currentMoveIndex];
     if (!evaluation?.suggestedMove) return [];
 
-    return [[
-      evaluation.suggestedMove.from,
-      evaluation.suggestedMove.to,
-      'rgb(0, 255, 0)'
-    ]];
+    return [{
+      from: evaluation.suggestedMove.from,
+      to: evaluation.suggestedMove.to,
+      color: 'rgb(0, 255, 0)'
+    }];
   };
 
   const getSquareStyles = useCallback(() => {
