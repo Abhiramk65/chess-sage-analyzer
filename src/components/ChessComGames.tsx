@@ -68,7 +68,7 @@ const ChessComGames: React.FC<ChessComGamesProps> = ({
             </div>
           </div>
           <Pagination>
-            <PaginationContent className="flex flex-wrap gap-1 justify-start">
+            <PaginationContent className="flex items-center gap-1">
               <PaginationItem>
                 <Button 
                   variant="outline" 
@@ -79,12 +79,13 @@ const ChessComGames: React.FC<ChessComGamesProps> = ({
                   <PaginationPrevious className="h-4 w-4" />
                 </Button>
               </PaginationItem>
-              <div className="flex flex-wrap gap-1">
+              <div className="flex items-center gap-1">
                 {games.map((_, index) => (
                   <PaginationItem key={index}>
                     <Button
                       variant={currentGameIndex === index ? "default" : "outline"}
                       size="icon"
+                      className="w-8 h-8"
                       onClick={() => onGameSelect(index)}
                     >
                       {index + 1}
