@@ -1,5 +1,5 @@
 import React from 'react';
-import { Input } from './ui/button';
+import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { SearchIcon } from 'lucide-react';
 import { ChessComGame } from '../utils/chessComApi';
@@ -70,26 +70,35 @@ const ChessComGames: React.FC<ChessComGamesProps> = ({
           <Pagination>
             <PaginationContent>
               <PaginationItem>
-                <PaginationPrevious
+                <Button 
+                  variant="outline" 
+                  size="icon"
                   onClick={() => onGameSelect(currentGameIndex - 1)}
                   disabled={currentGameIndex === 0}
-                />
+                >
+                  <PaginationPrevious className="h-4 w-4" />
+                </Button>
               </PaginationItem>
               {games.map((_, index) => (
                 <PaginationItem key={index}>
-                  <PaginationLink
+                  <Button
+                    variant={currentGameIndex === index ? "default" : "outline"}
+                    size="icon"
                     onClick={() => onGameSelect(index)}
-                    isActive={currentGameIndex === index}
                   >
                     {index + 1}
-                  </PaginationLink>
+                  </Button>
                 </PaginationItem>
               ))}
               <PaginationItem>
-                <PaginationNext
+                <Button 
+                  variant="outline" 
+                  size="icon"
                   onClick={() => onGameSelect(currentGameIndex + 1)}
                   disabled={currentGameIndex === games.length - 1}
-                />
+                >
+                  <PaginationNext className="h-4 w-4" />
+                </Button>
               </PaginationItem>
             </PaginationContent>
           </Pagination>
