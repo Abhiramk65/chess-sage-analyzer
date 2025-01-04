@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { MoveEvaluation } from '../utils/moveAnalysis';
+import { ScrollArea } from './ui/scroll-area';
 
 interface MoveListProps {
   moves: string[];
@@ -14,6 +15,18 @@ const MoveList: React.FC<MoveListProps> = ({
   currentMoveIndex,
   onMoveClick,
 }) => {
+  const moveRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  useEffect(() => {
+    console.log('Scrolling to move:', currentMoveIndex);
+    if (currentMoveIndex >= 0 && moveRefs.current[currentMoveIndex]) {
+      moveRefs.current[currentMoveIndex]?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    }
+  }, [currentMoveIndex]);
+
   const analyzeMoveQuality = (move: string, index: number) => {
     const moveNumber = Math.floor(index / 2) + 1;
     const isWhiteMove = index % 2 === 0;
@@ -21,7 +34,11 @@ const MoveList: React.FC<MoveListProps> = ({
     const evaluation = moveEvaluations[index];
     
     return (
-      <div key={index} className="space-y-2">
+      <div 
+        key={index} 
+        className="space-y-2"
+        ref={el => moveRefs.current[index] = el}
+      >
         <div 
           className={`cursor-pointer p-2 hover:bg-gray-100 ${
             currentMoveIndex === index ? 'bg-gray-200' : ''
@@ -50,9 +67,11 @@ const MoveList: React.FC<MoveListProps> = ({
   };
 
   return (
-    <div className="max-h-[400px] overflow-y-auto border rounded-md p-2 space-y-2">
-      {moves.map((move, index) => analyzeMoveQuality(move, index))}
-    </div>
+    <ScrollArea className="h-[400px] border rounded-md p-2">
+      <div className="space-y-2">
+        {moves.map((move, index) => analyzeMoveQuality(move, index))}
+      </div>
+    </ScrollArea>
   );
 };
 
