@@ -3,12 +3,13 @@ import { Chess } from 'chess.js';
 import { Chessboard } from 'react-chessboard';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { ArrowLeftIcon, ArrowRightIcon, SearchIcon } from 'lucide-react';
+import { ArrowLeftIcon, ArrowRightIcon } from 'lucide-react';
 import { useToast } from './ui/use-toast';
 import { evaluateMove, MoveEvaluation } from '../utils/moveAnalysis';
 import MoveList from './MoveList';
 import { Arrow, Square } from 'react-chessboard/dist/chessboard/types';
 import { fetchUserGames, ChessComGame } from '../utils/chessComApi';
+import ChessComGames from './ChessComGames';
 
 const ChessAnalyzer = () => {
   const [game, setGame] = useState(new Chess());
@@ -19,6 +20,7 @@ const ChessAnalyzer = () => {
   const [username, setUsername] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [games, setGames] = useState<ChessComGame[]>([]);
+  const [currentGameIndex, setCurrentGameIndex] = useState(0);
 
   const handlePgnUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -113,6 +115,34 @@ const ChessAnalyzer = () => {
     }
   }, [moves, toast]);
 
+  const loadGame = useCallback((pgn: string) => {
+    try {
+      const newGame = new Chess();
+      newGame.loadPgn(pgn);
+      const moveHistory = newGame.history();
+      const evaluations = moveHistory.map((move, index) => evaluateMove(move, index));
+      
+      setGame(new Chess());
+      setMoves(moveHistory);
+      setMoveEvaluations(evaluations);
+      setCurrentMoveIndex(0);
+    } catch (error) {
+      console.error('Error loading game:', error);
+      toast({
+        title: "Error loading game",
+        description: "Failed to load the selected game",
+        variant: "destructive",
+      });
+    }
+  }, [toast]);
+
+  const handleGameSelect = useCallback((index: number) => {
+    if (index >= 0 && index < games.length) {
+      setCurrentGameIndex(index);
+      loadGame(games[index].pgn);
+    }
+  }, [games, loadGame]);
+
   const handleChessComSearch = async () => {
     if (!username.trim()) {
       toast({
@@ -127,19 +157,10 @@ const ChessAnalyzer = () => {
     try {
       const fetchedGames = await fetchUserGames(username);
       setGames(fetchedGames);
+      setCurrentGameIndex(0);
       
       if (fetchedGames.length > 0) {
-        // Load the first game automatically
-        const newGame = new Chess();
-        newGame.loadPgn(fetchedGames[0].pgn);
-        const moveHistory = newGame.history();
-        const evaluations = moveHistory.map((move, index) => evaluateMove(move, index));
-        
-        setGame(new Chess());
-        setMoves(moveHistory);
-        setMoveEvaluations(evaluations);
-        setCurrentMoveIndex(0);
-        
+        loadGame(fetchedGames[0].pgn);
         toast({
           title: "Games loaded successfully",
           description: `Found ${fetchedGames.length} games from chess.com`,
@@ -202,31 +223,15 @@ const ChessAnalyzer = () => {
               className="w-full"
             />
           </div>
-          <div>
-            <h2 className="text-xl font-bold mb-2">Import from chess.com</h2>
-            <div className="flex gap-2">
-              <Input
-                type="text"
-                placeholder="Enter chess.com username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="flex-1"
-              />
-              <Button 
-                onClick={handleChessComSearch}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  "Loading..."
-                ) : (
-                  <>
-                    <SearchIcon className="mr-2 h-4 w-4" />
-                    Search
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
+          <ChessComGames
+            username={username}
+            setUsername={setUsername}
+            isLoading={isLoading}
+            onSearch={handleChessComSearch}
+            games={games}
+            currentGameIndex={currentGameIndex}
+            onGameSelect={handleGameSelect}
+          />
           <div>
             <h2 className="text-xl font-bold mb-2">Move List</h2>
             <MoveList
