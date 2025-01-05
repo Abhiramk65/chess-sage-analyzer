@@ -184,6 +184,37 @@ const ChessAnalyzer = () => {
     }
   };
 
+  const onDrop = (sourceSquare: Square, targetSquare: Square) => {
+    try {
+      const move = game.move({
+        from: sourceSquare,
+        to: targetSquare,
+        promotion: 'q', // always promote to queen for simplicity
+      });
+
+      if (move === null) return false; // illegal move
+      
+      // Update the game state with the new move
+      setGame(new Chess(game.fen()));
+      
+      // Add the move to moves list
+      const newMoves = [...moves.slice(0, currentMoveIndex + 1), move.san];
+      setMoves(newMoves);
+      
+      // Evaluate the new move
+      const evaluation = evaluateMove(move.san, newMoves.length - 1);
+      setMoveEvaluations([...moveEvaluations.slice(0, currentMoveIndex + 1), evaluation]);
+      
+      // Update current move index
+      setCurrentMoveIndex(currentMoveIndex + 1);
+
+      return true;
+    } catch (error) {
+      console.error('Error making move:', error);
+      return false;
+    }
+  };
+
   return (
     <div className="container mx-auto p-4">
       <div className="flex flex-col md:flex-row justify-center items-start gap-8">
@@ -194,6 +225,7 @@ const ChessAnalyzer = () => {
               boardWidth={600}
               customSquareStyles={getSquareStyles()}
               customArrows={getCustomArrows()}
+              onPieceDrop={onDrop}
             />
           </div>
           <div className="flex justify-center gap-4 mt-4">
