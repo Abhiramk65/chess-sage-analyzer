@@ -187,7 +187,7 @@ const ChessAnalyzer = () => {
   return (
     <div className="container mx-auto p-4">
       <div className="flex flex-col md:flex-row justify-center items-start gap-8">
-        <div className="w-full md:w-auto flex-shrink-0">
+        <div className="w-full md:w-auto flex-shrink-0 md:sticky md:top-4">
           <div className="max-w-[600px] mx-auto">
             <Chessboard 
               position={game.fen()} 
