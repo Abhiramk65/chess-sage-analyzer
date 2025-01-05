@@ -232,6 +232,8 @@ const ChessAnalyzer = () => {
             <Button
               onClick={() => goToMove(currentMoveIndex - 1)}
               disabled={currentMoveIndex <= 0}
+              variant="outline"
+              className="px-4"
             >
               <ArrowLeftIcon className="mr-2" />
               Previous
@@ -239,6 +241,8 @@ const ChessAnalyzer = () => {
             <Button
               onClick={() => goToMove(currentMoveIndex + 1)}
               disabled={currentMoveIndex >= moves.length - 1}
+              variant="outline"
+              className="px-4"
             >
               Next
               <ArrowRightIcon className="ml-2" />
