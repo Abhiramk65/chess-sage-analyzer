@@ -186,9 +186,9 @@ const ChessAnalyzer = () => {
 
   return (
     <div className="container mx-auto p-4">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="md:col-span-2">
-          <div className="w-full max-w-[600px] mx-auto">
+      <div className="flex flex-col md:flex-row justify-center items-start gap-8">
+        <div className="w-full md:w-auto flex-shrink-0">
+          <div className="max-w-[600px] mx-auto">
             <Chessboard 
               position={game.fen()} 
               boardWidth={600}
@@ -213,7 +213,7 @@ const ChessAnalyzer = () => {
             </Button>
           </div>
         </div>
-        <div className="space-y-4">
+        <div className="w-full md:w-80 space-y-4">
           <div>
             <h2 className="text-xl font-bold mb-2">Upload PGN</h2>
             <Input
