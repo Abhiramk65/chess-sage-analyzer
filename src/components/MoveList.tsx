@@ -94,9 +94,9 @@ const MoveList: React.FC<MoveListProps> = ({
 
   const handleBestMoves = () => {
     // Find the first mistake or blunder
-    const firstMistakeIndex = moveEvaluations.findIndex(eval => 
-      eval?.quality.includes('Mistake') || 
-      eval?.quality.includes('Blunder')
+    const firstMistakeIndex = moveEvaluations.findIndex(evaluation => 
+      evaluation?.quality.includes('Mistake') || 
+      evaluation?.quality.includes('Blunder')
     );
     if (firstMistakeIndex >= 0) {
       onMoveClick(firstMistakeIndex);
@@ -112,10 +112,10 @@ const MoveList: React.FC<MoveListProps> = ({
 
   const handleNext = () => {
     // Go to the next mistake or blunder after current position
-    const nextMistakeIndex = moveEvaluations.findIndex((eval, index) => 
+    const nextMistakeIndex = moveEvaluations.findIndex((evaluation, index) => 
       index > currentMoveIndex && 
-      (eval?.quality.includes('Mistake') || 
-       eval?.quality.includes('Blunder'))
+      (evaluation?.quality.includes('Mistake') || 
+       evaluation?.quality.includes('Blunder'))
     );
     if (nextMistakeIndex >= 0) {
       onMoveClick(nextMistakeIndex);
