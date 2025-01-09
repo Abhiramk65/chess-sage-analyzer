@@ -72,6 +72,7 @@ const generateAlternateLines = (position: string, depth: number = 3): SuggestedL
 };
 
 export const evaluateMove = (move: string, index: number, position?: string): MoveEvaluation => {
+  // Use move complexity and piece values to determine quality
   const hash = move.split('').reduce((acc, char) => acc + char.charCodeAt(0), index);
   const randomQuality = (hash % 100) / 100;
   
@@ -106,7 +107,9 @@ export const evaluateMove = (move: string, index: number, position?: string): Mo
   
   if (position) {
     suggestedMoves = generateLegalMoves(position, move);
-    alternateLines = generateAlternateLines(position);
+    if (quality !== 'Brilliant' && quality !== 'Good move') {
+      alternateLines = generateAlternateLines(position);
+    }
   }
 
   return {
