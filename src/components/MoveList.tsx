@@ -70,19 +70,27 @@ const MoveList: React.FC<MoveListProps> = ({
             <span>{moveNotation}</span>
             <span className={`text-sm font-bold ${colorClass}`}>{icon}</span>
           </div>
-          {(evaluation?.quality.includes('Inaccuracy') || 
-           evaluation?.quality.includes('Mistake') || 
-           evaluation?.quality.includes('Blunder')) && (
+          {evaluation && (evaluation.quality.includes('Inaccuracy') || 
+           evaluation.quality.includes('Mistake') || 
+           evaluation.quality.includes('Blunder')) && (
             <div className="mt-2 text-sm bg-gray-50 p-2 rounded">
               <div className="font-medium text-gray-700">Best move was:</div>
-              {evaluation?.alternateLines && evaluation.alternateLines.length > 0 && (
+              {evaluation.suggestedMove && (
                 <div className="ml-2 font-mono">
-                  {evaluation.alternateLines[0].moves.join(' ')}
+                  {`${evaluation.suggestedMove.from}${evaluation.suggestedMove.to}`}
                 </div>
               )}
-              {evaluation?.suggestedMove && (
+              {evaluation.alternateLines && evaluation.alternateLines.length > 0 && (
+                <div className="mt-1">
+                  <div className="text-xs text-gray-600 mb-1">Alternative line:</div>
+                  <div className="ml-2 font-mono text-sm">
+                    {evaluation.alternateLines[0].moves.join(' ')}
+                  </div>
+                </div>
+              )}
+              {evaluation.evaluation !== undefined && (
                 <div className="mt-1 text-xs text-gray-600">
-                  Evaluation: {evaluation.evaluation?.toFixed(1)}
+                  Evaluation: {evaluation.evaluation.toFixed(1)}
                 </div>
               )}
             </div>
@@ -93,7 +101,6 @@ const MoveList: React.FC<MoveListProps> = ({
   };
 
   const handleBestMoves = () => {
-    // Find the first mistake or blunder
     const firstMistakeIndex = moveEvaluations.findIndex(evaluation => 
       evaluation?.quality.includes('Mistake') || 
       evaluation?.quality.includes('Blunder')
@@ -104,14 +111,12 @@ const MoveList: React.FC<MoveListProps> = ({
   };
 
   const handleRetry = () => {
-    // Reset to the position before the current move
     if (currentMoveIndex > 0) {
       onMoveClick(currentMoveIndex - 1);
     }
   };
 
   const handleNext = () => {
-    // Go to the next mistake or blunder after current position
     const nextMistakeIndex = moveEvaluations.findIndex((evaluation, index) => 
       index > currentMoveIndex && 
       (evaluation?.quality.includes('Mistake') || 
