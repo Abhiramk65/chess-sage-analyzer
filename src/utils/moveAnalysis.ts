@@ -18,60 +18,70 @@ export interface MoveEvaluation {
   evaluation?: number;
 }
 
-const generateLegalMoves = (position: string, lastMove: string): { from: Square; to: Square }[] => {
-  const chess = new Chess(position);
-  const legalMoves = chess.moves({ verbose: true });
-  
-  // Sort moves by a basic evaluation to simulate "best" moves
-  const sortedMoves = legalMoves.sort((a, b) => {
-    const pieceValues: { [key: string]: number } = {
-      p: 1, n: 3, b: 3, r: 5, q: 9, k: 0
-    };
+const generateLegalMoves = (position: string): { from: Square; to: Square }[] => {
+  try {
+    const chess = new Chess(position);
+    const legalMoves = chess.moves({ verbose: true });
     
-    const aValue = a.captured ? pieceValues[a.captured] || 0 : 0;
-    const bValue = b.captured ? pieceValues[b.captured] || 0 : 0;
+    // Sort moves by a basic evaluation to simulate "best" moves
+    const sortedMoves = legalMoves.sort((a, b) => {
+      const pieceValues: { [key: string]: number } = {
+        p: 1, n: 3, b: 3, r: 5, q: 9, k: 0
+      };
+      
+      const aValue = a.captured ? pieceValues[a.captured] || 0 : 0;
+      const bValue = b.captured ? pieceValues[b.captured] || 0 : 0;
+      
+      return bValue - aValue;
+    });
     
-    return bValue - aValue;
-  });
-  
-  return sortedMoves.slice(0, 3).map(move => ({
-    from: move.from as Square,
-    to: move.to as Square
-  }));
+    return sortedMoves.map(move => ({
+      from: move.from as Square,
+      to: move.to as Square
+    }));
+  } catch (error) {
+    console.error('Error generating legal moves:', error);
+    return [];
+  }
 };
 
 const generateAlternateLines = (position: string, depth: number = 3): SuggestedLine[] => {
-  const chess = new Chess(position);
-  const lines: SuggestedLine[] = [];
-  
-  const legalMoves = chess.moves({ verbose: true });
-  const topMoves = legalMoves.slice(0, 2); // Get top 2 alternate moves
-  
-  for (const move of topMoves) {
-    const line: string[] = [move.san];
-    const tempChess = new Chess(position);
-    tempChess.move(move);
+  try {
+    const chess = new Chess(position);
+    const lines: SuggestedLine[] = [];
     
-    // Generate a few follow-up moves
-    for (let i = 0; i < depth - 1; i++) {
-      const responses = tempChess.moves({ verbose: true });
-      if (responses.length === 0) break;
+    const legalMoves = chess.moves({ verbose: true });
+    const topMoves = legalMoves.slice(0, 2); // Get top 2 alternate moves
+    
+    for (const move of topMoves) {
+      const line: string[] = [move.san];
+      const tempChess = new Chess(position);
+      tempChess.move(move);
       
-      const response = responses[Math.floor(Math.random() * responses.length)];
-      tempChess.move(response);
-      line.push(response.san);
+      // Generate a few follow-up moves
+      for (let i = 0; i < depth - 1; i++) {
+        const responses = tempChess.moves({ verbose: true });
+        if (responses.length === 0) break;
+        
+        const response = responses[Math.floor(Math.random() * responses.length)];
+        tempChess.move(response);
+        line.push(response.san);
+      }
+      
+      lines.push({
+        moves: line,
+        evaluation: Math.random() * 2 - 1 // Simulated evaluation between -1 and 1
+      });
     }
     
-    lines.push({
-      moves: line,
-      evaluation: Math.random() * 2 - 1 // Simulated evaluation between -1 and 1
-    });
+    return lines;
+  } catch (error) {
+    console.error('Error generating alternate lines:', error);
+    return [];
   }
-  
-  return lines;
 };
 
-export const evaluateMove = (move: string, index: number, position?: string): MoveEvaluation => {
+export const evaluateMove = (move: string, index: number): MoveEvaluation => {
   // Use move complexity and piece values to determine quality
   const hash = move.split('').reduce((acc, char) => acc + char.charCodeAt(0), index);
   const randomQuality = (hash % 100) / 100;
@@ -102,21 +112,21 @@ export const evaluateMove = (move: string, index: number, position?: string): Mo
     evaluation = -3;
   }
 
-  let suggestedMoves: { from: Square; to: Square }[] = [];
-  let alternateLines: SuggestedLine[] = [];
-  
-  if (position) {
-    suggestedMoves = generateLegalMoves(position, move);
-    if (quality !== 'Brilliant' && quality !== 'Good move') {
-      alternateLines = generateAlternateLines(position);
-    }
-  }
+  // Generate suggested moves for non-optimal moves
+  const suggestedMove = quality !== 'Brilliant' && quality !== 'Good move' 
+    ? { from: 'e2' as Square, to: 'e4' as Square }  // Default suggestion
+    : undefined;
+
+  // Generate alternate lines for non-optimal moves
+  const alternateLines = quality !== 'Brilliant' && quality !== 'Good move'
+    ? [{ moves: ['e4', 'e5', 'Nf3'], evaluation: 0.5 }]
+    : undefined;
 
   return {
     move,
     quality,
     className,
-    suggestedMove: suggestedMoves[0],
+    suggestedMove,
     alternateLines,
     evaluation
   };
