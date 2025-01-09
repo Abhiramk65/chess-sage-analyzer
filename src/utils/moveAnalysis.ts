@@ -15,6 +15,7 @@ export interface MoveEvaluation {
     to: Square;
   };
   alternateLines?: SuggestedLine[];
+  evaluation?: number;
 }
 
 const generateLegalMoves = (position: string, lastMove: string): { from: Square; to: Square }[] => {
@@ -33,7 +34,6 @@ const generateLegalMoves = (position: string, lastMove: string): { from: Square;
     return bValue - aValue;
   });
   
-  // Return top 3 moves
   return sortedMoves.slice(0, 3).map(move => ({
     from: move.from as Square,
     to: move.to as Square
@@ -77,22 +77,28 @@ export const evaluateMove = (move: string, index: number, position?: string): Mo
   
   let quality = '';
   let className = '';
+  let evaluation = 0;
   
   if (randomQuality > 0.9) {
-    quality = '!! (Brilliant)';
+    quality = 'Brilliant';
     className = 'text-green-600 font-bold';
+    evaluation = 3;
   } else if (randomQuality > 0.7) {
-    quality = '! (Good move)';
+    quality = 'Good move';
     className = 'text-green-500';
+    evaluation = 1;
   } else if (randomQuality > 0.4) {
-    quality = '⟳ (Normal)';
+    quality = 'Normal';
     className = 'text-gray-500';
+    evaluation = 0;
   } else if (randomQuality > 0.2) {
-    quality = '? (Inaccuracy)';
+    quality = 'Inaccuracy';
     className = 'text-yellow-500';
+    evaluation = -1;
   } else {
-    quality = '?? (Blunder)';
+    quality = 'Blunder';
     className = 'text-red-500';
+    evaluation = -3;
   }
 
   let suggestedMoves: { from: Square; to: Square }[] = [];
@@ -108,6 +114,7 @@ export const evaluateMove = (move: string, index: number, position?: string): Mo
     quality,
     className,
     suggestedMove: suggestedMoves[0],
-    alternateLines
+    alternateLines,
+    evaluation
   };
 };
