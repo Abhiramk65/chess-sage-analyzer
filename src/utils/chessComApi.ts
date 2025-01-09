@@ -32,17 +32,12 @@ export const fetchUserGames = async (username: string): Promise<ChessComGame[]> 
     let games: ChessComGame[] = [];
     
     if (data.games && Array.isArray(data.games)) {
-      // Get current timestamp in seconds (chess.com API uses seconds)
-      const now = Math.floor(Date.now() / 1000);
-      // Get timestamp for 24 hours ago
-      const oneDayAgo = now - (24 * 60 * 60);
-      
-      // Filter games from last 24 hours and sort by most recent
+      // Sort games by end_time in descending order (most recent first)
       games = data.games
-        .filter(game => game.end_time >= oneDayAgo)
-        .sort((a, b) => b.end_time - a.end_time);
+        .sort((a, b) => b.end_time - a.end_time)
+        .slice(0, 20); // Take only the 20 most recent games
       
-      console.log(`Fetched ${games.length} recent games from the last 24 hours`);
+      console.log(`Fetched ${games.length} most recent games`);
     }
     
     return games;
