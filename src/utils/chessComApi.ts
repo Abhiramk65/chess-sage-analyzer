@@ -8,48 +8,44 @@ export interface ChessComGame {
   black: { username: string; rating: number };
 }
 
-const getMonthsToFetch = (count: number = 3): string[] => {
-  const months: string[] = [];
+const getCurrentMonth = (): string => {
   const now = new Date();
-  
-  for (let i = 0; i < count; i++) {
-    const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const monthStr = date.toISOString().slice(0, 7).replace('-', '/');
-    months.push(monthStr);
-  }
-  
-  return months;
+  // Get current month in YYYY/MM format
+  const currentMonth = now.toISOString().slice(0, 7).replace('-', '/');
+  return currentMonth;
 };
 
 export const fetchUserGames = async (username: string): Promise<ChessComGame[]> => {
   console.log('Fetching games for user:', username);
-  const months = getMonthsToFetch();
-  const allGames: ChessComGame[] = [];
+  const currentMonth = getCurrentMonth();
   
   try {
-    for (const month of months) {
-      console.log(`Fetching games for month: ${month}`);
-      const response = await fetch(`https://api.chess.com/pub/player/${username}/games/${month}`);
-      
-      if (!response.ok) {
-        console.warn(`Failed to fetch games for ${month}`);
-        continue; // Skip failed months but continue with others
-      }
-      
-      const data = await response.json();
-      if (data.games && Array.isArray(data.games)) {
-        allGames.push(...data.games);
-      }
+    console.log(`Fetching games for current month: ${currentMonth}`);
+    const response = await fetch(`https://api.chess.com/pub/player/${username}/games/${currentMonth}`);
+    
+    if (!response.ok) {
+      console.error(`Failed to fetch games for ${currentMonth}`);
+      throw new Error('Failed to fetch games');
     }
     
-    // Sort games by end_time in descending order (most recent first)
-    allGames.sort((a, b) => b.end_time - a.end_time);
+    const data = await response.json();
+    let games: ChessComGame[] = [];
     
-    // Limit to 50 most recent games to prevent performance issues
-    const recentGames = allGames.slice(0, 50);
+    if (data.games && Array.isArray(data.games)) {
+      // Get current timestamp in seconds (chess.com API uses seconds)
+      const now = Math.floor(Date.now() / 1000);
+      // Get timestamp for 24 hours ago
+      const oneDayAgo = now - (24 * 60 * 60);
+      
+      // Filter games from last 24 hours and sort by most recent
+      games = data.games
+        .filter(game => game.end_time >= oneDayAgo)
+        .sort((a, b) => b.end_time - a.end_time);
+      
+      console.log(`Fetched ${games.length} recent games from the last 24 hours`);
+    }
     
-    console.log(`Fetched ${recentGames.length} recent games`);
-    return recentGames;
+    return games;
     
   } catch (error) {
     console.error('Error fetching chess.com games:', error);
