@@ -48,6 +48,10 @@ const evaluatePosition = (chess: Chess): number => {
     }
   });
 
+  // Mobility bonus (number of legal moves)
+  const mobilityScore = chess.moves().length * 0.1;
+  score += chess.turn() === 'w' ? mobilityScore : -mobilityScore;
+
   return score;
 };
 
@@ -184,15 +188,20 @@ export const evaluateMove = (move: string, index: number): MoveEvaluation => {
       className = 'text-red-500';
     }
 
-    return {
+    // Always include suggestedMove and alternateLines for non-brilliant moves
+    const moveEvaluation: MoveEvaluation = {
       move,
       quality,
       className,
-      suggestedMove: quality !== 'Brilliant' && quality !== 'Good move' ? bestMove : undefined,
-      alternateLines: quality !== 'Brilliant' && quality !== 'Good move' ? 
-        generateAlternateLines(positionBeforeMove) : undefined,
       evaluation: evalDiff
     };
+
+    if (quality !== 'Brilliant' && quality !== 'Good move') {
+      moveEvaluation.suggestedMove = bestMove;
+      moveEvaluation.alternateLines = generateAlternateLines(positionBeforeMove);
+    }
+
+    return moveEvaluation;
   } catch (error) {
     console.error('Error evaluating move:', error);
     return {
