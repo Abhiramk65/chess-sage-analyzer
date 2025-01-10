@@ -82,10 +82,10 @@ const findBestMove = (chess: Chess) => {
   
   for (const move of moves) {
     chess.move(move);
-    const eval = evaluatePosition(chess);
+    const positionEval = evaluatePosition(chess);
     
-    if (isWhite ? eval > bestEval : eval < bestEval) {
-      bestEval = eval;
+    if (isWhite ? positionEval > bestEval : positionEval < bestEval) {
+      bestEval = positionEval;
       bestMove = move;
     }
     
