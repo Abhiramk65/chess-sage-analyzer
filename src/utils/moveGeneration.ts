@@ -8,12 +8,27 @@ export const generateBestMoves = (chess: Chess): { from: Square; to: Square }[] 
     const currentPosition = chess.fen();
     const isWhite = chess.turn() === 'w';
     
-    // Evaluate each move
+    // Evaluate each move with deeper search
     const movesWithEval = legalMoves.map(move => {
       const tempChess = new Chess(currentPosition);
       tempChess.move(move);
-      const evaluation = evaluatePosition(tempChess);
-      return { move, evaluation };
+      
+      // Look ahead one more move to better evaluate the position
+      let bestResponseScore = isWhite ? Infinity : -Infinity;
+      const responses = tempChess.moves({ verbose: true });
+      
+      for (const response of responses) {
+        tempChess.move(response);
+        const score = evaluatePosition(tempChess);
+        if (isWhite && score < bestResponseScore) bestResponseScore = score;
+        if (!isWhite && score > bestResponseScore) bestResponseScore = score;
+        tempChess.undo();
+      }
+      
+      return { 
+        move, 
+        evaluation: isWhite ? -bestResponseScore : bestResponseScore 
+      };
     });
 
     // Sort moves considering the current player's perspective
@@ -37,10 +52,22 @@ export const generateAlternateLines = (position: string, depth: number = 3) => {
     const isWhite = chess.turn() === 'w';
     const legalMoves = chess.moves({ verbose: true });
     
+    // Evaluate moves with deeper search for alternate lines
     const movesWithEval = legalMoves.map(move => {
       const tempChess = new Chess(position);
       tempChess.move(move);
-      const evaluation = evaluatePosition(tempChess);
+      let evaluation = evaluatePosition(tempChess);
+      
+      // Look ahead one more move
+      const responses = tempChess.moves({ verbose: true });
+      if (responses.length > 0) {
+        const bestResponse = findBestMove(tempChess);
+        if (bestResponse) {
+          tempChess.move(bestResponse);
+          evaluation = isWhite ? -evaluatePosition(tempChess) : evaluatePosition(tempChess);
+        }
+      }
+      
       return { move, evaluation };
     });
 
