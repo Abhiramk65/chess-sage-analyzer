@@ -58,25 +58,23 @@ const evaluatePosition = (chess: Chess): number => {
 const generateLegalMoves = (chess: Chess): { from: Square; to: Square }[] => {
   try {
     const legalMoves = chess.moves({ verbose: true });
+    const currentPosition = chess.fen();
     
-    // Sort moves by basic evaluation
-    const sortedMoves = legalMoves.sort((a, b) => {
-      const tempChess = new Chess(chess.fen());
-      
-      // Try first move
-      tempChess.move(a);
-      const evalA = evaluatePosition(tempChess);
-      tempChess.undo();
-      
-      // Try second move
-      tempChess.move(b);
-      const evalB = evaluatePosition(tempChess);
-      tempChess.undo();
-      
-      return evalB - evalA;
+    // Sort moves by evaluation after making each move
+    const movesWithEval = legalMoves.map(move => {
+      const tempChess = new Chess(currentPosition);
+      tempChess.move(move);
+      const evaluation = evaluatePosition(tempChess);
+      return { move, evaluation };
+    });
+
+    // Sort moves by evaluation, considering the perspective of the current player
+    const isWhite = chess.turn() === 'w';
+    const sortedMoves = movesWithEval.sort((a, b) => {
+      return isWhite ? b.evaluation - a.evaluation : a.evaluation - b.evaluation;
     });
     
-    return sortedMoves.map(move => ({
+    return sortedMoves.map(({ move }) => ({
       from: move.from as Square,
       to: move.to as Square
     }));
@@ -92,23 +90,25 @@ const generateAlternateLines = (position: string, depth: number = 3): SuggestedL
     const lines: SuggestedLine[] = [];
     
     const legalMoves = chess.moves({ verbose: true });
-    const sortedMoves = legalMoves.sort((a, b) => {
-      const tempChess = new Chess(position);
-      
-      tempChess.move(a);
-      const evalA = evaluatePosition(tempChess);
-      tempChess.undo();
-      
-      tempChess.move(b);
-      const evalB = evaluatePosition(tempChess);
-      tempChess.undo();
-      
-      return evalB - evalA;
+    const currentPosition = chess.fen();
+    
+    // Evaluate each move
+    const movesWithEval = legalMoves.map(move => {
+      const tempChess = new Chess(currentPosition);
+      tempChess.move(move);
+      const evaluation = evaluatePosition(tempChess);
+      return { move, evaluation };
+    });
+
+    // Sort moves by evaluation
+    const isWhite = chess.turn() === 'w';
+    const sortedMoves = movesWithEval.sort((a, b) => {
+      return isWhite ? b.evaluation - a.evaluation : a.evaluation - b.evaluation;
     });
     
     const topMoves = sortedMoves.slice(0, 2);
     
-    for (const move of topMoves) {
+    for (const { move } of topMoves) {
       const line: string[] = [move.san];
       const tempChess = new Chess(position);
       tempChess.move(move);
@@ -121,12 +121,12 @@ const generateAlternateLines = (position: string, depth: number = 3): SuggestedL
         
         // Find the best response
         let bestMove = responses[0];
-        let bestEval = -Infinity;
+        let bestEval = isWhite ? Infinity : -Infinity;
         
         for (const response of responses) {
           tempChess.move(response);
           const positionEval = evaluatePosition(tempChess);
-          if (positionEval > bestEval) {
+          if ((isWhite && positionEval < bestEval) || (!isWhite && positionEval > bestEval)) {
             bestEval = positionEval;
             bestMove = response;
           }
