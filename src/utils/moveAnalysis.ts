@@ -121,9 +121,9 @@ const generateAlternateLines = (position: string, depth: number = 3): SuggestedL
         
         for (const response of responses) {
           tempChess.move(response);
-          const eval = evaluatePosition(tempChess);
-          if (eval > bestEval) {
-            bestEval = eval;
+          const positionEval = evaluatePosition(tempChess);
+          if (positionEval > bestEval) {
+            bestEval = positionEval;
             bestMove = response;
           }
           tempChess.undo();
