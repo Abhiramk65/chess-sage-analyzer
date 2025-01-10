@@ -18,21 +18,58 @@ export interface MoveEvaluation {
   evaluation?: number;
 }
 
-const generateLegalMoves = (position: string): { from: Square; to: Square }[] => {
+const getPieceValue = (piece: string): number => {
+  const values: { [key: string]: number } = {
+    p: 1, n: 3, b: 3, r: 5, q: 9, k: 0
+  };
+  return values[piece.toLowerCase()] || 0;
+};
+
+const evaluatePosition = (chess: Chess): number => {
+  const fen = chess.fen();
+  const position = fen.split(' ')[0];
+  let score = 0;
+
+  // Material evaluation
+  for (let i = 0; i < position.length; i++) {
+    const char = position[i];
+    if (char.match(/[pnbrqk]/i)) {
+      const value = getPieceValue(char);
+      score += char === char.toUpperCase() ? value : -value;
+    }
+  }
+
+  // Center control bonus
+  const centralSquares = ['e4', 'e5', 'd4', 'd5'];
+  centralSquares.forEach(square => {
+    const piece = chess.get(square as Square);
+    if (piece) {
+      score += piece.color === 'w' ? 0.2 : -0.2;
+    }
+  });
+
+  return score;
+};
+
+const generateLegalMoves = (chess: Chess): { from: Square; to: Square }[] => {
   try {
-    const chess = new Chess(position);
     const legalMoves = chess.moves({ verbose: true });
     
-    // Sort moves by a basic evaluation to simulate "best" moves
+    // Sort moves by basic evaluation
     const sortedMoves = legalMoves.sort((a, b) => {
-      const pieceValues: { [key: string]: number } = {
-        p: 1, n: 3, b: 3, r: 5, q: 9, k: 0
-      };
+      const tempChess = new Chess(chess.fen());
       
-      const aValue = a.captured ? pieceValues[a.captured] || 0 : 0;
-      const bValue = b.captured ? pieceValues[b.captured] || 0 : 0;
+      // Try first move
+      tempChess.move(a);
+      const evalA = evaluatePosition(tempChess);
+      tempChess.undo();
       
-      return bValue - aValue;
+      // Try second move
+      tempChess.move(b);
+      const evalB = evaluatePosition(tempChess);
+      tempChess.undo();
+      
+      return evalB - evalA;
     });
     
     return sortedMoves.map(move => ({
@@ -51,26 +88,55 @@ const generateAlternateLines = (position: string, depth: number = 3): SuggestedL
     const lines: SuggestedLine[] = [];
     
     const legalMoves = chess.moves({ verbose: true });
-    const topMoves = legalMoves.slice(0, 2); // Get top 2 alternate moves
+    const sortedMoves = legalMoves.sort((a, b) => {
+      const tempChess = new Chess(position);
+      
+      tempChess.move(a);
+      const evalA = evaluatePosition(tempChess);
+      tempChess.undo();
+      
+      tempChess.move(b);
+      const evalB = evaluatePosition(tempChess);
+      tempChess.undo();
+      
+      return evalB - evalA;
+    });
+    
+    const topMoves = sortedMoves.slice(0, 2);
     
     for (const move of topMoves) {
       const line: string[] = [move.san];
       const tempChess = new Chess(position);
       tempChess.move(move);
       
-      // Generate a few follow-up moves
+      let currentEval = evaluatePosition(tempChess);
+      
       for (let i = 0; i < depth - 1; i++) {
         const responses = tempChess.moves({ verbose: true });
         if (responses.length === 0) break;
         
-        const response = responses[Math.floor(Math.random() * responses.length)];
-        tempChess.move(response);
-        line.push(response.san);
+        // Find the best response
+        let bestMove = responses[0];
+        let bestEval = -Infinity;
+        
+        for (const response of responses) {
+          tempChess.move(response);
+          const eval = evaluatePosition(tempChess);
+          if (eval > bestEval) {
+            bestEval = eval;
+            bestMove = response;
+          }
+          tempChess.undo();
+        }
+        
+        tempChess.move(bestMove);
+        line.push(bestMove.san);
+        currentEval = bestEval;
       }
       
       lines.push({
         moves: line,
-        evaluation: Math.random() * 2 - 1 // Simulated evaluation between -1 and 1
+        evaluation: currentEval
       });
     }
     
@@ -82,52 +148,58 @@ const generateAlternateLines = (position: string, depth: number = 3): SuggestedL
 };
 
 export const evaluateMove = (move: string, index: number): MoveEvaluation => {
-  // Use move complexity and piece values to determine quality
-  const hash = move.split('').reduce((acc, char) => acc + char.charCodeAt(0), index);
-  const randomQuality = (hash % 100) / 100;
-  
-  let quality = '';
-  let className = '';
-  let evaluation = 0;
-  
-  if (randomQuality > 0.9) {
-    quality = 'Brilliant';
-    className = 'text-green-600 font-bold';
-    evaluation = 3;
-  } else if (randomQuality > 0.7) {
-    quality = 'Good move';
-    className = 'text-green-500';
-    evaluation = 1;
-  } else if (randomQuality > 0.4) {
-    quality = 'Normal';
-    className = 'text-gray-500';
-    evaluation = 0;
-  } else if (randomQuality > 0.2) {
-    quality = 'Inaccuracy';
-    className = 'text-yellow-500';
-    evaluation = -1;
-  } else {
-    quality = 'Blunder';
-    className = 'text-red-500';
-    evaluation = -3;
+  try {
+    const chess = new Chess();
+    const moveHistory = move.split(' ');
+    moveHistory.forEach(m => chess.move(m));
+    
+    const positionBeforeMove = chess.fen();
+    chess.undo();
+    
+    const currentEval = evaluatePosition(chess);
+    const legalMoves = generateLegalMoves(chess);
+    const bestMove = legalMoves[0];
+    
+    chess.move(move);
+    const newEval = evaluatePosition(chess);
+    const evalDiff = newEval - currentEval;
+    
+    let quality = '';
+    let className = '';
+    
+    if (evalDiff > 1.5) {
+      quality = 'Brilliant';
+      className = 'text-green-600 font-bold';
+    } else if (evalDiff > 0.5) {
+      quality = 'Good move';
+      className = 'text-green-500';
+    } else if (evalDiff > -0.5) {
+      quality = 'Normal';
+      className = 'text-gray-500';
+    } else if (evalDiff > -1.5) {
+      quality = 'Inaccuracy';
+      className = 'text-yellow-500';
+    } else {
+      quality = 'Blunder';
+      className = 'text-red-500';
+    }
+
+    return {
+      move,
+      quality,
+      className,
+      suggestedMove: quality !== 'Brilliant' && quality !== 'Good move' ? bestMove : undefined,
+      alternateLines: quality !== 'Brilliant' && quality !== 'Good move' ? 
+        generateAlternateLines(positionBeforeMove) : undefined,
+      evaluation: evalDiff
+    };
+  } catch (error) {
+    console.error('Error evaluating move:', error);
+    return {
+      move,
+      quality: 'Normal',
+      className: 'text-gray-500',
+      evaluation: 0
+    };
   }
-
-  // Generate suggested moves for non-optimal moves
-  const suggestedMove = quality !== 'Brilliant' && quality !== 'Good move' 
-    ? { from: 'e2' as Square, to: 'e4' as Square }  // Default suggestion
-    : undefined;
-
-  // Generate alternate lines for non-optimal moves
-  const alternateLines = quality !== 'Brilliant' && quality !== 'Good move'
-    ? [{ moves: ['e4', 'e5', 'Nf3'], evaluation: 0.5 }]
-    : undefined;
-
-  return {
-    move,
-    quality,
-    className,
-    suggestedMove,
-    alternateLines,
-    evaluation
-  };
 };
