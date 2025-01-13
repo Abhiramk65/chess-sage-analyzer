@@ -1,8 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { MoveEvaluation } from '../utils/moveAnalysis';
 import { ScrollArea } from './ui/scroll-area';
-import { Button } from './ui/button';
-import { Search, RotateCcw, ArrowRight } from 'lucide-react';
 
 interface MoveListProps {
   moves: string[];
@@ -20,55 +18,20 @@ const MoveList: React.FC<MoveListProps> = ({
   const moveRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   useEffect(() => {
+    console.log('Scrolling to move:', currentMoveIndex);
     if (currentMoveIndex >= 0 && moveRefs.current[currentMoveIndex]) {
       moveRefs.current[currentMoveIndex]?.scrollIntoView({
         behavior: 'smooth',
-        block: 'nearest',
+        block: 'start',
       });
     }
   }, [currentMoveIndex]);
-
-  const getEvaluationIcon = (quality: string) => {
-    if (quality.includes('Brilliant')) return '!!';
-    if (quality.includes('Good')) return '!';
-    if (quality.includes('Inaccuracy')) return '?';
-    if (quality.includes('Mistake')) return '??';
-    if (quality.includes('Blunder')) return '???';
-    return '⟳';
-  };
-
-  const getEvaluationColor = (quality: string) => {
-    if (quality.includes('Brilliant')) return 'text-green-500';
-    if (quality.includes('Good')) return 'text-green-400';
-    if (quality.includes('Inaccuracy')) return 'text-yellow-500';
-    if (quality.includes('Mistake')) return 'text-orange-500';
-    if (quality.includes('Blunder')) return 'text-red-500';
-    return 'text-gray-500';
-  };
-
-  const formatEvaluation = (evaluation: number): string => {
-    if (evaluation === 0) return '0.0';
-    
-    // Convert to white's perspective
-    const absValue = Math.abs(evaluation);
-    const sign = evaluation > 0 ? '+' : '-';
-    
-    // Handle mate scores
-    if (absValue >= 100) {
-      return `M${Math.ceil((1000 - absValue) / 100)}`;
-    }
-    
-    // Regular evaluation
-    return `${sign}${absValue.toFixed(1)}`;
-  };
 
   const analyzeMoveQuality = (move: string, index: number) => {
     const moveNumber = Math.floor(index / 2) + 1;
     const isWhiteMove = index % 2 === 0;
     const moveNotation = `${moveNumber}${isWhiteMove ? '.' : '...'} ${move}`;
     const evaluation = moveEvaluations[index];
-    const icon = evaluation ? getEvaluationIcon(evaluation.quality) : '';
-    const colorClass = evaluation ? getEvaluationColor(evaluation.quality) : '';
     
     return (
       <div 
@@ -77,111 +40,38 @@ const MoveList: React.FC<MoveListProps> = ({
         ref={el => moveRefs.current[index] = el}
       >
         <div 
-          className={`cursor-pointer p-2 rounded-md hover:bg-gray-100 ${
+          className={`cursor-pointer p-2 hover:bg-gray-100 ${
             currentMoveIndex === index ? 'bg-gray-200' : ''
-          }`}
+          } ${evaluation?.className || ''}`}
           onClick={() => onMoveClick(index)}
         >
-          <div className="flex items-center justify-between">
-            <span>{moveNotation}</span>
-            <div className="flex items-center gap-2">
-              {evaluation?.evaluation !== undefined && (
-                <span className="text-sm font-mono">
-                  {formatEvaluation(evaluation.evaluation)}
-                </span>
-              )}
-              <span className={`text-sm font-bold ${colorClass}`}>{icon}</span>
-            </div>
-          </div>
-          {evaluation && (evaluation.quality.includes('Inaccuracy') || 
-           evaluation.quality.includes('Mistake') || 
-           evaluation.quality.includes('Blunder')) && (
-            <div className="mt-2 text-sm bg-gray-50 p-2 rounded">
-              <div className="font-medium text-gray-700">Best move was:</div>
-              {evaluation.suggestedMove && (
-                <div className="ml-2 font-mono">
-                  {`${evaluation.suggestedMove.from}${evaluation.suggestedMove.to}`}
-                </div>
-              )}
-              {evaluation.alternateLines && evaluation.alternateLines.length > 0 && (
-                <div className="mt-1">
-                  <div className="text-xs text-gray-600 mb-1">Alternative line:</div>
-                  <div className="ml-2 font-mono text-sm">
-                    {evaluation.alternateLines[0].moves.join(' ')}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
+          {moveNotation} {evaluation?.quality || ''}
         </div>
+        {evaluation?.alternateLines && evaluation.alternateLines.length > 0 && (
+          <div className="ml-4 text-sm space-y-1">
+            {evaluation.alternateLines.map((line, lineIndex) => (
+              <div 
+                key={lineIndex}
+                className="text-gray-600 hover:text-gray-900"
+              >
+                Alternative {lineIndex + 1} (eval: {line.evaluation.toFixed(2)}):
+                <div className="ml-2 font-mono">
+                  {line.moves.join(' ')}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     );
-  };
-
-  const handleBestMoves = () => {
-    const firstMistakeIndex = moveEvaluations.findIndex(evaluation => 
-      evaluation?.quality.includes('Mistake') || 
-      evaluation?.quality.includes('Blunder')
-    );
-    if (firstMistakeIndex >= 0) {
-      onMoveClick(firstMistakeIndex);
-    }
-  };
-
-  const handleRetry = () => {
-    if (currentMoveIndex > 0) {
-      onMoveClick(currentMoveIndex - 1);
-    }
-  };
-
-  const handleNext = () => {
-    const nextMistakeIndex = moveEvaluations.findIndex((evaluation, index) => 
-      index > currentMoveIndex && 
-      (evaluation?.quality.includes('Mistake') || 
-       evaluation?.quality.includes('Blunder'))
-    );
-    if (nextMistakeIndex >= 0) {
-      onMoveClick(nextMistakeIndex);
-    }
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex gap-2">
-        <Button 
-          variant="outline" 
-          size="sm" 
-          className="flex-1"
-          onClick={handleBestMoves}
-        >
-          <Search className="w-4 h-4 mr-2" />
-          Best
-        </Button>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          className="flex-1"
-          onClick={handleRetry}
-        >
-          <RotateCcw className="w-4 h-4 mr-2" />
-          Retry
-        </Button>
-        <Button 
-          variant="default" 
-          size="sm" 
-          className="flex-1 bg-[#85b853]"
-          onClick={handleNext}
-        >
-          <ArrowRight className="w-4 h-4 mr-2" />
-          Next
-        </Button>
+    <ScrollArea className="h-[400px] border rounded-md p-2">
+      <div className="space-y-2">
+        {moves.map((move, index) => analyzeMoveQuality(move, index))}
       </div>
-      <ScrollArea className="h-[400px] border rounded-md p-2">
-        <div className="space-y-2">
-          {moves.map((move, index) => analyzeMoveQuality(move, index))}
-        </div>
-      </ScrollArea>
-    </div>
+    </ScrollArea>
   );
 };
 

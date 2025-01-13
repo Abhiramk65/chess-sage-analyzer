@@ -60,12 +60,7 @@ const ChessAnalyzer = () => {
     if (currentMoveIndex < 0 || currentMoveIndex >= moveEvaluations.length) return [];
     
     const evaluation = moveEvaluations[currentMoveIndex];
-    if (!evaluation?.suggestedMove || 
-        !(evaluation.quality.includes('Mistake') || 
-          evaluation.quality.includes('Blunder') || 
-          evaluation.quality.includes('Inaccuracy'))) {
-      return [];
-    }
+    if (!evaluation?.suggestedMove) return [];
 
     return [[
       evaluation.suggestedMove.from,
