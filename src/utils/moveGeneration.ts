@@ -8,33 +8,39 @@ export const generateBestMoves = (chess: Chess): { from: Square; to: Square }[] 
     const currentPosition = chess.fen();
     const isWhite = chess.turn() === 'w';
     
-    // Evaluate each move with deeper search
     const movesWithEval = legalMoves.map(move => {
       const tempChess = new Chess(currentPosition);
       tempChess.move(move);
       
-      // Look ahead one more move to better evaluate the position
-      let bestResponseScore = isWhite ? Infinity : -Infinity;
+      // Calculate immediate position score
+      const immediateScore = evaluatePosition(tempChess);
+      
+      // Look ahead for opponent's best response
       const responses = tempChess.moves({ verbose: true });
+      let bestResponseScore = immediateScore;
       
       for (const response of responses) {
         tempChess.move(response);
-        const score = evaluatePosition(tempChess);
-        if (isWhite && score < bestResponseScore) bestResponseScore = score;
-        if (!isWhite && score > bestResponseScore) bestResponseScore = score;
+        const responseScore = evaluatePosition(tempChess);
+        if (isWhite && responseScore < bestResponseScore) {
+          bestResponseScore = responseScore;
+        }
+        if (!isWhite && responseScore > bestResponseScore) {
+          bestResponseScore = responseScore;
+        }
         tempChess.undo();
       }
       
-      return { 
-        move, 
-        evaluation: isWhite ? -bestResponseScore : bestResponseScore 
+      return {
+        move,
+        evaluation: bestResponseScore
       };
     });
 
-    // Sort moves considering the current player's perspective
-    const sortedMoves = movesWithEval.sort((a, b) => {
-      return isWhite ? b.evaluation - a.evaluation : a.evaluation - b.evaluation;
-    });
+    // Sort moves based on evaluation
+    const sortedMoves = movesWithEval.sort((a, b) => 
+      isWhite ? b.evaluation - a.evaluation : a.evaluation - b.evaluation
+    );
     
     return sortedMoves.map(({ move }) => ({
       from: move.from as Square,
@@ -52,23 +58,30 @@ export const generateAlternateLines = (position: string, depth: number = 3) => {
     const isWhite = chess.turn() === 'w';
     const legalMoves = chess.moves({ verbose: true });
     
-    // Evaluate moves with deeper search for alternate lines
     const movesWithEval = legalMoves.map(move => {
       const tempChess = new Chess(position);
       tempChess.move(move);
-      let evaluation = evaluatePosition(tempChess);
       
-      // Look ahead one more move
+      // Calculate position score after the move
+      let positionScore = evaluatePosition(tempChess);
+      
+      // Look ahead for best response
       const responses = tempChess.moves({ verbose: true });
       if (responses.length > 0) {
-        const bestResponse = findBestMove(tempChess);
-        if (bestResponse) {
-          tempChess.move(bestResponse);
-          evaluation = isWhite ? -evaluatePosition(tempChess) : evaluatePosition(tempChess);
+        let bestResponseScore = isWhite ? Infinity : -Infinity;
+        
+        for (const response of responses) {
+          tempChess.move(response);
+          const score = evaluatePosition(tempChess);
+          if (isWhite && score < bestResponseScore) bestResponseScore = score;
+          if (!isWhite && score > bestResponseScore) bestResponseScore = score;
+          tempChess.undo();
         }
+        
+        positionScore = bestResponseScore;
       }
       
-      return { move, evaluation };
+      return { move, evaluation: positionScore };
     });
 
     const sortedMoves = movesWithEval.sort((a, b) => 
@@ -81,6 +94,7 @@ export const generateAlternateLines = (position: string, depth: number = 3) => {
       tempChess.move(move);
       let currentEval = evaluatePosition(tempChess);
       
+      // Generate continuation moves
       for (let i = 0; i < depth - 1 && tempChess.moves().length > 0; i++) {
         const bestMove = findBestMove(tempChess);
         if (!bestMove) break;
@@ -109,10 +123,10 @@ const findBestMove = (chess: Chess) => {
   
   for (const move of moves) {
     chess.move(move);
-    const positionEval = evaluatePosition(chess);
+    const positionScore = evaluatePosition(chess);
     
-    if (isWhite ? positionEval > bestEval : positionEval < bestEval) {
-      bestEval = positionEval;
+    if (isWhite ? positionScore > bestEval : positionScore < bestEval) {
+      bestEval = positionScore;
       bestMove = move;
     }
     
