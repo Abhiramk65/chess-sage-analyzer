@@ -46,6 +46,22 @@ const MoveList: React.FC<MoveListProps> = ({
     return 'text-gray-500';
   };
 
+  const formatEvaluation = (evaluation: number): string => {
+    if (evaluation === 0) return '0.0';
+    
+    // Convert to white's perspective
+    const absValue = Math.abs(evaluation);
+    const sign = evaluation > 0 ? '+' : '-';
+    
+    // Handle mate scores
+    if (absValue >= 100) {
+      return `M${Math.ceil((1000 - absValue) / 100)}`;
+    }
+    
+    // Regular evaluation
+    return `${sign}${absValue.toFixed(1)}`;
+  };
+
   const analyzeMoveQuality = (move: string, index: number) => {
     const moveNumber = Math.floor(index / 2) + 1;
     const isWhiteMove = index % 2 === 0;
@@ -68,7 +84,14 @@ const MoveList: React.FC<MoveListProps> = ({
         >
           <div className="flex items-center justify-between">
             <span>{moveNotation}</span>
-            <span className={`text-sm font-bold ${colorClass}`}>{icon}</span>
+            <div className="flex items-center gap-2">
+              {evaluation?.evaluation !== undefined && (
+                <span className="text-sm font-mono">
+                  {formatEvaluation(evaluation.evaluation)}
+                </span>
+              )}
+              <span className={`text-sm font-bold ${colorClass}`}>{icon}</span>
+            </div>
           </div>
           {evaluation && (evaluation.quality.includes('Inaccuracy') || 
            evaluation.quality.includes('Mistake') || 
@@ -86,11 +109,6 @@ const MoveList: React.FC<MoveListProps> = ({
                   <div className="ml-2 font-mono text-sm">
                     {evaluation.alternateLines[0].moves.join(' ')}
                   </div>
-                </div>
-              )}
-              {evaluation.evaluation !== undefined && (
-                <div className="mt-1 text-xs text-gray-600">
-                  Evaluation: {evaluation.evaluation.toFixed(1)}
                 </div>
               )}
             </div>
