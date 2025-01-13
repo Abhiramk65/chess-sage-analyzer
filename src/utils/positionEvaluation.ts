@@ -1,4 +1,5 @@
 import { Chess } from 'chess.js';
+import { Square } from 'react-chessboard/dist/chessboard/types';
 import { getPieceValue } from './pieceValues';
 
 export const evaluatePosition = (chess: Chess): number => {
@@ -16,7 +17,7 @@ export const evaluatePosition = (chess: Chess): number => {
   }
 
   // Center control bonus (e4, e5, d4, d5)
-  const centralSquares = ['e4', 'e5', 'd4', 'd5'];
+  const centralSquares: Square[] = ['e4', 'e5', 'd4', 'd5'];
   centralSquares.forEach(square => {
     const piece = chess.get(square);
     if (piece) {
